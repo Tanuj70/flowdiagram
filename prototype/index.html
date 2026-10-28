@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Agent Studio</title>
+<style>
+:root{--bg:#f6f7f9;--panel:#fff;--line:#e3e6eb;--text:#1b1f27;--mute:#6b7280;--accent:#4f46e5;--accent-soft:#eef0ff;--tool:#0f9d74;--tool-soft:#e6f6f0;--ep:#d97706;--ep-soft:#fef3e2;--danger:#dc2626}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1115;--panel:#171a21;--line:#2a2f3a;--text:#e8eaf0;--mute:#9aa3b2;--accent:#818cf8;--accent-soft:#232648;--tool:#34d399;--tool-soft:#12302a;--ep:#fbbf24;--ep-soft:#3a2d12;--danger:#f87171}}
+*{box-sizing:border-box}
+body{margin:0;font:14px/1.4 system-ui,-apple-system,Segoe UI,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:grid;grid-template-columns:280px 1fr;overflow:hidden}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+#side{background:var(--panel);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0}
+.brand{padding:14px 16px;font-weight:700;font-size:15px;border-bottom:1px solid var(--line)}
+.tabs{display:flex;border-bottom:1px solid var(--line)}
+.tabs button{flex:1;padding:10px 4px;background:none;border:0;border-bottom:2px solid transparent;color:var(--mute);font-weight:600;font-size:13px}
+.tabs button.on{color:var(--accent);border-color:var(--accent)}
+.tools-bar{display:flex;gap:6px;padding:10px}
+.tools-bar input{flex:1;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+.btn{padding:6px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.btn.pri{background:var(--accent);border-color:var(--accent);color:#fff}
+.list{overflow:auto;padding:0 10px 12px;flex:1}
+.item{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:6px;background:var(--panel);cursor:grab}
+.item:hover{border-color:var(--accent)}
+.item.sel{border-color:var(--accent);background:var(--accent-soft)}
+.item b{display:block;font-size:13px}.item small{color:var(--mute)}
+.grp{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);margin:12px 2px 6px;display:flex;justify-content:space-between}
+.badge{display:inline-block;font-size:10px;padding:1px 6px;border-radius:99px;background:var(--bg);border:1px solid var(--line);color:var(--mute);margin-left:4px}
+.badge.w{color:var(--danger)}
+.sub{margin-left:14px;border-left:2px solid var(--line);padding-left:8px}
+#main{position:relative;display:flex;flex-direction:column;min-width:0;min-height:0}
+#top{height:48px;border-bottom:1px solid var(--line);background:var(--panel);display:flex;align-items:center;gap:8px;padding:0 14px}
+#top .sp{flex:1}
+#canvasWrap{flex:1;overflow:auto;position:relative;background-image:radial-gradient(var(--line) 1px,transparent 1px);background-size:20px 20px}
+#world{position:relative;width:2000px;height:1200px}
+#edges{position:absolute;inset:0;width:100%;height:100%;pointer-events:none}
+#edges path{fill:none;stroke-width:2;pointer-events:stroke;cursor:pointer}
+#edges path:hover{stroke:var(--danger)!important}
+.node{position:absolute;background:var(--panel);border:1.5px solid var(--line);border-radius:10px;user-select:none;cursor:move}
+.node.agent{width:210px;padding:10px 12px;border-color:var(--accent)}
+.node.agent.sel{box-shadow:0 0 0 3px var(--accent-soft),0 0 0 4px var(--accent)}
+.node.agent .t{font-weight:700}.node.agent .d{color:var(--mute);font-size:12px;margin-top:2px}
+.node.agent .meta{margin-top:6px;font-size:11px;color:var(--mute)}
+.node.tool,.node.endpoint{width:180px;padding:7px 10px;font-size:12px;display:flex;align-items:center;gap:6px}
+.node.tool{border-color:var(--tool);background:var(--tool-soft)}
+.node.endpoint{border-color:var(--ep);background:var(--ep-soft)}
+.node .x{margin-left:auto;border:0;background:none;color:var(--mute);font-size:14px;padding:0 2px}
+.plus{position:absolute;left:50%;bottom:-13px;transform:translateX(-50%);width:26px;height:26px;border-radius:50%;border:2px solid var(--accent);background:var(--panel);color:var(--accent);font-weight:700;line-height:1;padding:0}
+.node.dropT{outline:2px dashed var(--accent)}
+#menu{position:absolute;z-index:20;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.2);width:250px;max-height:340px;overflow:auto;padding:6px;display:none}
+#menu .grp{margin:8px 6px 4px}
+#menu button{display:block;width:100%;text-align:left;background:none;border:0;padding:6px 8px;border-radius:6px}
+#menu button:hover{background:var(--accent-soft)}
+#run{border-top:1px solid var(--line);background:var(--panel);height:0;overflow:hidden;transition:height .2s}
+#run.open{height:220px}
+#run .in{display:flex;gap:6px;padding:10px}
+#run input{flex:1;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+#trace{padding:0 12px;overflow:auto;height:150px;font-size:12px;font-family:ui-monospace,monospace}
+#trace div{padding:2px 0;border-bottom:1px dashed var(--line)}
+#drawer{position:absolute;top:48px;right:0;bottom:0;width:420px;background:var(--panel);border-left:1px solid var(--line);transform:translateX(100%);transition:transform .2s;display:flex;flex-direction:column;z-index:10}
+#drawer.open{transform:none}
+#main.dock #canvasWrap,#main.dock #run{margin-right:420px}
+#drawer header{padding:12px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+#drawer header b{flex:1}
+.dtabs{display:flex;overflow:auto;border-bottom:1px solid var(--line)}
+.dtabs button{padding:8px 10px;border:0;background:none;color:var(--mute);white-space:nowrap;border-bottom:2px solid transparent;font-size:13px}
+.dtabs button.on{color:var(--accent);border-color:var(--accent);font-weight:600}
+#dbody{padding:14px;overflow:auto;flex:1}
+label.f{display:block;margin-bottom:12px;font-size:12px;color:var(--mute)}
+label.f input[type=text],label.f select,label.f textarea,label.f input[type=number]{display:block;width:100%;margin-top:4px;padding:7px 9px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text)}
+label.f textarea{min-height:110px;resize:vertical}
+.row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+.row input[type=range]{flex:1}.row span.v{width:48px;text-align:right;font-variant-numeric:tabular-nums}
+.chk{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+.chk .sp{flex:1}.chk small{color:var(--mute)}
+h4{margin:14px 0 6px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute)}
+.stat{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.card{border:1px solid var(--line);border-radius:8px;padding:10px}
+.card b{font-size:18px;display:block}.card small{color:var(--mute)}
+.bars{display:flex;align-items:flex-end;gap:3px;height:60px;margin-top:8px}
+.bars i{flex:1;background:var(--accent);border-radius:2px 2px 0 0;opacity:.8}
+table{width:100%;border-collapse:collapse}td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:13px}
+.empty{color:var(--mute);text-align:center;padding:30px 0}
+</style>
+</head>
+<body>
+<aside id="side">
+  <div class="brand">⚡ Agent Studio</div>
+  <div class="tabs" id="tabs"></div>
+  <div class="tools-bar"><input id="q" placeholder="Search…"><button class="btn pri" id="create">+ New</button></div>
+  <div class="list" id="list"></div>
+</aside>
+<section id="main">
+  <div id="top">
+    <b id="title">Canvas</b><span class="sp"></span>
+    <button class="btn" id="autoBtn">Auto-layout</button>
+    <button class="btn" id="resetBtn">Reset demo</button>
+    <button class="btn pri" id="runBtn">▶ Run</button>
+  </div>
+  <div id="canvasWrap"><div id="world"><svg id="edges"></svg></div></div>
+  <div id="run">
+    <div class="in"><input id="prompt" value="Customer wants a refund for order #1042"><button class="btn pri" id="go">Send</button></div>
+    <div id="trace"></div>
+  </div>
+  <aside id="drawer"></aside>
+  <div id="menu"></div>
+</section>
+
+<script>
+const $=s=>document.querySelector(s);
+const uid=()=>Math.random().toString(36).slice(2,8);
+
+/* ---------- seed data ---------- */
+const MCP=[
+ {id:'github',name:'GitHub',tools:[['create_issue','write'],['search_repos','read']]},
+ {id:'slack',name:'Slack',tools:[['post_message','write'],['read_channel','read']]},
+ {id:'postgres',name:'Postgres',tools:[['query','read'],['list_tables','read']]},
+ {id:'files',name:'Filesystem',tools:[['read_file','read'],['write_file','write']]}
+];
+const ENDPOINTS=[
+ {id:'ep_order',name:'Get order',method:'GET',url:'https://api.shop.com/orders/{id}',auth:'Bearer',mode:'read'},
+ {id:'ep_refund',name:'Create refund',method:'POST',url:'https://api.shop.com/refunds',auth:'Bearer',mode:'write'},
+ {id:'ep_weather',name:'Weather',method:'GET',url:'https://api.weather.dev/v1/now',auth:'API key',mode:'read'}
+];
+const toolMeta=id=>{const [s,t]=id.split('.');const m=MCP.find(x=>x.id===s);const tt=m.tools.find(x=>x[0]===t);return{server:m.name,name:t,mode:tt[1]}};
+const newAgent=(name,desc)=>({id:'a_'+uid(),name,desc,prompt:'You are a helpful agent.',skills:['summarize'],framework:'ADK 2.0',pattern:'sequential',model:'claude-sonnet-5-5',maxTokens:2048,temp:0.4,topP:0.9,topK:40,
+  guard:{pii:'block',injection:'block',toxicity:'warn',topics:'off',schema:'log'},approval:[],
+  roles:[{who:'you@company.com',role:'Admin'},{who:'ops-team',role:'Executor'}],
+  mem:{short:true,long:false,backend:'Vector DB',retention:30,max:500}});
+function seed(){
+ const o=newAgent('Support Orchestrator','Routes customer requests');o.id='a_orch';o.pattern='parallel';
+ const b=newAgent('Billing Agent','Refunds and invoices');b.id='a_bill';b.approval=['ep_refund'];
+ const r=newAgent('Research Agent','Looks things up');r.id='a_res';
+ const k=newAgent('KB Agent','Answers from docs');k.id='a_kb';
+ const nodes=[
+  {id:'n_orch',type:'agent',ref:'a_orch',x:520,y:60},
+  {id:'n_bill',type:'agent',ref:'a_bill',x:200,y:240},
+  {id:'n_res',type:'agent',ref:'a_res',x:520,y:240},
+  {id:'n_kb',type:'agent',ref:'a_kb',x:840,y:240},
+  {id:'n_t1',type:'endpoint',ref:'ep_order',x:120,y:430},
+  {id:'n_t2',type:'endpoint',ref:'ep_refund',x:330,y:430},
+  {id:'n_t3',type:'tool',ref:'github.search_repos',x:520,y:430},
+  {id:'n_t4',type:'tool',ref:'postgres.query',x:840,y:430}];
+ const e=(f,t)=>({id:uid(),from:f,to:t});
+ return{agents:[o,b,r,k],nodes,edges:[e('n_orch','n_bill'),e('n_orch','n_res'),e('n_orch','n_kb'),e('n_bill','n_t1'),e('n_bill','n_t2'),e('n_res','n_t3'),e('n_kb','n_t4')],sel:'n_orch'};
+}
+let S;try{S=JSON.parse(localStorage.getItem('studio')||'null')}catch(e){}
+if(!S)S=seed();
+const save=()=>{try{localStorage.setItem('studio',JSON.stringify(S))}catch(e){}};
+const agentOf=n=>S.agents.find(a=>a.id===n.ref);
+const node=id=>S.nodes.find(n=>n.id===id);
+const selNode=()=>node(S.sel);
+
+/* ---------- sidebar ---------- */
+let tab='agents';
+function renderTabs(){
+ $('#tabs').innerHTML=[['agents','Agents'],['mcp','MCP / Tools'],['ep','URL Endpoints']].map(([k,l])=>`<button class="${tab===k?'on':''}" data-t="${k}">${l}</button>`).join('');
+}
+function connectedOf(nid){return S.edges.filter(e=>e.from===nid).map(e=>node(e.to)).filter(Boolean)}
+function renderList(){
+ const q=$('#q').value.toLowerCase();let h='';
+ if(tab==='agents'){
+  const children=new Set(S.edges.map(e=>e.to));
+  const roots=S.nodes.filter(n=>n.type==='agent'&&!children.has(n.id));
+  const draw=(n,d)=>{const a=agentOf(n);if(!a)return'';
+   const kids=connectedOf(n.id);
+   const t=kids.filter(k=>k.type==='tool').length,e=kids.filter(k=>k.type==='endpoint').length;
+   let s=`<div class="item ${S.sel===n.id?'sel':''}" draggable="true" data-drag="agent:${a.id}" data-focus="${n.id}"><b>${a.name}</b><small>${a.desc||''}</small><div><span class="badge">${t} tools</span><span class="badge">${e} endpoints</span></div></div>`;
+   const subs=kids.filter(k=>k.type==='agent');
+   if(subs.length&&d<5)s+=`<div class="sub">${subs.map(k=>draw(k,d+1)).join('')}</div>`;
+   return s};
+  const shown=new Set();
+  h=roots.map(n=>draw(n,0)).join('');
+  const orphans=S.agents.filter(a=>!S.nodes.some(n=>n.ref===a.id));
+  if(orphans.length)h+=`<div class="grp">Not on canvas</div>`+orphans.map(a=>`<div class="item" draggable="true" data-drag="agent:${a.id}"><b>${a.name}</b><small>${a.desc||''}</small></div>`).join('');
+  if(q)h=S.agents.filter(a=>a.name.toLowerCase().includes(q)).map(a=>{const n=S.nodes.find(n=>n.ref===a.id);return`<div class="item" draggable="true" data-drag="agent:${a.id}" ${n?`data-focus="${n.id}"`:''}><b>${a.name}</b><small>${a.desc||''}</small></div>`}).join('');
+ }else if(tab==='mcp'){
+  h=MCP.map(m=>{const ts=m.tools.filter(t=>!q||(m.name+t[0]).toLowerCase().includes(q));if(!ts.length)return'';
+   return`<div class="grp"><span>${m.name} (MCP)</span></div>`+ts.map(t=>`<div class="item" draggable="true" data-drag="tool:${m.id}.${t[0]}"><b>${t[0]}<span class="badge ${t[1]==='write'?'w':''}">${t[1]}</span></b><small>${m.name} server</small></div>`).join('')}).join('');
+ }else{
+  h=ENDPOINTS.filter(e=>!q||e.name.toLowerCase().includes(q)).map(e=>`<div class="item" draggable="true" data-drag="endpoint:${e.id}"><b>${e.name}<span class="badge ${e.mode==='write'?'w':''}">${e.method}</span></b><small>${e.url}</small><div><span class="badge">${e.auth}</span></div></div>`).join('');
+ }
+ $('#list').innerHTML=h||'<div class="empty">Nothing found</div>';
+}
+
+/* ---------- canvas ---------- */
+const SZ=n=>n.type==='agent'?{w:210,h:84}:{w:180,h:34};
+function nodeHTML(n){
+ const st=`left:${n.x}px;top:${n.y}px`;
+ if(n.type==='agent'){const a=agentOf(n);if(!a)return'';const k=connectedOf(n.id);
+  return`<div class="node agent ${S.sel===n.id?'sel':''}" data-id="${n.id}" style="${st}"><div class="t">${a.name}</div><div class="d">${a.desc||''}</div><div class="meta">${a.framework} · ${a.pattern} · ${k.length} links</div><button class="x" style="position:absolute;top:4px;right:6px;border:0;background:none;color:var(--mute)" data-del="${n.id}">×</button><button class="plus" data-plus="${n.id}">+</button></div>`}
+ if(n.type==='tool'){const m=toolMeta(n.ref);return`<div class="node tool" data-id="${n.id}" style="${st}">🔧 <span><b>${m.name}</b> <small>${m.server}</small></span><button class="x" data-del="${n.id}">×</button></div>`}
+ const e=ENDPOINTS.find(x=>x.id===n.ref);return`<div class="node endpoint" data-id="${n.id}" style="${st}">🌐 <span><b>${e.method}</b> ${e.name}</span><button class="x" data-del="${n.id}">×</button></div>`;
+}
+function renderEdges(){
+ $('#edges').innerHTML=S.edges.map(e=>{const a=node(e.from),b=node(e.to);if(!a||!b)return'';
+  const sa=SZ(a),sb=SZ(b);const x1=a.x+sa.w/2,y1=a.y+sa.h,x2=b.x+sb.w/2,y2=b.y;const m=(y1+y2)/2;
+  const c=b.type==='agent'?'var(--accent)':b.type==='tool'?'var(--tool)':'var(--ep)';
+  const dash=agentOf(a)&&agentOf(a).pattern==='parallel'&&b.type==='agent'?'stroke-dasharray="6 4"':'';
+  return`<path data-edge="${e.id}" d="M${x1},${y1} C${x1},${m} ${x2},${m} ${x2},${y2}" stroke="${c}" ${dash}><title>Click to disconnect</title></path>`}).join('');
+}
+function renderCanvas(){
+ [...$('#world').querySelectorAll('.node')].forEach(n=>n.remove());
+ $('#world').insertAdjacentHTML('beforeend',S.nodes.map(nodeHTML).join(''));
+ renderEdges();
+}
+function refresh(){renderCanvas();renderList();renderDrawer();save()}
+
+function addNode(type,ref,x,y){
+ let n=S.nodes.find(n=>n.type===type&&n.ref===ref);
+ if(n&&type!=='agent')return n; // tools/endpoints are shared single nodes
+ if(n)return n;
+ n={id:'n_'+uid(),type,ref,x:Math.max(10,x),y:Math.max(10,y)};freeSpot(n);S.nodes.push(n);return n;
+}
+function freeSpot(n){const z=SZ(n);
+ const hit=()=>S.nodes.some(o=>{const q=SZ(o);return n.x<o.x+q.w+16&&o.x<n.x+z.w+16&&n.y<o.y+q.h+16&&o.y<n.y+z.h+16});
+ let i=0;while(hit()&&i++<60){n.x+=z.w+24;if(n.x>1700){n.x=20;n.y+=z.h+30}}}
+function connect(from,to){
+ if(from===to)return;
+ if(S.edges.some(e=>e.from===from&&e.to===to))return;
+ const f=node(from),t=node(to);
+ if(t.type==='agent'&&createsCycle(from,to)){toast('Circular delegation blocked');return}
+ S.edges.push({id:uid(),from,to});
+}
+function createsCycle(from,to){const seen=new Set();const go=id=>{if(id===from)return true;if(seen.has(id))return false;seen.add(id);return S.edges.filter(e=>e.from===id).some(e=>go(e.to))};return go(to)}
+function toast(m){const t=document.createElement('div');t.textContent=m;t.style.cssText='position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--text);color:var(--bg);padding:8px 14px;border-radius:8px;z-index:50';document.body.appendChild(t);setTimeout(()=>t.remove(),1800)}
+
+/* drag from sidebar */
+document.addEventListener('dragstart',e=>{const d=e.target.closest('[data-drag]');if(d)e.dataTransfer.setData('text/plain',d.dataset.drag)});
+const wrap=$('#canvasWrap');
+wrap.addEventListener('dragover',e=>{e.preventDefault();document.querySelectorAll('.dropT').forEach(x=>x.classList.remove('dropT'));const t=e.target.closest('.node.agent');if(t)t.classList.add('dropT')});
+wrap.addEventListener('drop',e=>{
+ e.preventDefault();const [type,ref]=e.dataTransfer.getData('text/plain').split(/:(.+)/);if(!ref)return;
+ const r=$('#world').getBoundingClientRect();const x=e.clientX-r.left-90,y=e.clientY-r.top-20;
+ const n=addNode(type,ref,x,y);
+ const tgt=e.target.closest('.node.agent');
+ const parent=tgt?tgt.dataset.id:(selNode()&&selNode().type==='agent'&&type!=='agent'?S.sel:null);
+ if(parent)connect(parent,n.id);
+ if(type==='agent')S.sel=n.id;
+ refresh();
+});
+
+/* node move / click */
+let drag=null;
+$('#world').addEventListener('mousedown',e=>{
+ if(e.target.closest('button'))return;
+ const el=e.target.closest('.node');if(!el)return;
+ const n=node(el.dataset.id);drag={n,el,sx:e.clientX,sy:e.clientY,ox:n.x,oy:n.y,moved:false};
+});
+window.addEventListener('mousemove',e=>{if(!drag)return;const dx=e.clientX-drag.sx,dy=e.clientY-drag.sy;if(Math.abs(dx)+Math.abs(dy)>3)drag.moved=true;
+ drag.n.x=Math.max(0,drag.ox+dx);drag.n.y=Math.max(0,drag.oy+dy);drag.el.style.left=drag.n.x+'px';drag.el.style.top=drag.n.y+'px';renderEdges()});
+window.addEventListener('mouseup',()=>{if(!drag)return;const d=drag;drag=null;
+ if(d.moved){save();return}
+ if(d.n.type==='agent'){S.sel=d.n.id;openDrawer();refresh()}});
+$('#world').addEventListener('click',e=>{
+ const del=e.target.closest('[data-del]');
+ if(del){const id=del.dataset.del;S.nodes=S.nodes.filter(n=>n.id!==id);S.edges=S.edges.filter(x=>x.from!==id&&x.to!==id);if(S.sel===id)S.sel=null;refresh();return}
+ const p=e.target.closest('[data-plus]');if(p){openMenu(p.dataset.plus,p);return}
+});
+$('#edges').addEventListener('click',e=>{const p=e.target.closest('[data-edge]');if(p){S.edges=S.edges.filter(x=>x.id!==p.dataset.edge);refresh()}});
+$('#edges').style.pointerEvents='none';
+document.getElementById('edges').addEventListener('mouseover',()=>{});
+// make edge paths clickable
+$('#edges').style.pointerEvents='none';
+
+/* "+" menu */
+function openMenu(nid,btn){
+ const m=$('#menu');const r=btn.getBoundingClientRect(),mr=$('#main').getBoundingClientRect();
+ const has=(t,ref)=>S.edges.some(e=>e.from===nid&&node(e.to)&&node(e.to).type===t&&node(e.to).ref===ref);
+ let h=`<button data-new="${nid}"><b>＋ Create new sub-agent</b></button><div class="grp">Existing agents</div>`;
+ h+=S.agents.filter(a=>{const me=node(nid);return a.id!==me.ref&&!has('agent',a.id)}).map(a=>`<button data-add="agent:${a.id}:${nid}">🤖 ${a.name}</button>`).join('')||'<div class="empty">none</div>';
+ h+=`<div class="grp">MCP tools</div>`+MCP.flatMap(s=>s.tools.map(t=>[s.id+'.'+t[0],s.name,t[0]])).filter(t=>!has('tool',t[0])).map(t=>`<button data-add="tool:${t[0]}:${nid}">🔧 ${t[2]} <small>${t[1]}</small></button>`).join('');
+ h+=`<div class="grp">Endpoints</div>`+ENDPOINTS.filter(e=>!has('endpoint',e.id)).map(e=>`<button data-add="endpoint:${e.id}:${nid}">🌐 ${e.method} ${e.name}</button>`).join('');
+ m.innerHTML=h;m.style.display='block';m.style.left=Math.min(r.left-mr.left,mr.width-270)+'px';m.style.top=Math.min(r.bottom-mr.top+4,mr.height-350)+'px';
+}
+document.addEventListener('click',e=>{
+ const m=$('#menu');
+ const add=e.target.closest('[data-add]');
+ if(add){const [type,ref,from]=add.dataset.add.split(':');const f=node(from);const kids=connectedOf(from).length;
+  const n=addNode(type,ref,f.x+(kids-1)*140-20,f.y+170);connect(from,n.id);m.style.display='none';refresh();return}
+ const nw=e.target.closest('[data-new]');
+ if(nw){const f=node(nw.dataset.new);const a=newAgent('New Agent','Describe me');S.agents.push(a);const n=addNode('agent',a.id,f.x+connectedOf(f.id).length*230-100,f.y+170);connect(f.id,n.id);S.sel=n.id;m.style.display='none';openDrawer();refresh();return}
+ if(!e.target.closest('#menu')&&!e.target.closest('[data-plus]'))m.style.display='none';
+ const f=e.target.closest('[data-focus]');
+ if(f){S.sel=f.dataset.focus;openDrawer();refresh()}
+ const t=e.target.closest('#tabs [data-t]');if(t){tab=t.dataset.t;renderTabs();renderList()}
+});
+$('#q').addEventListener('input',renderList);
+$('#create').addEventListener('click',()=>{
+ if(tab==='agents'){const a=newAgent('New Agent','Describe me');S.agents.push(a);const n=addNode('agent',a.id,300+Math.random()*300,60);S.sel=n.id;openDrawer();refresh()}
+ else toast(tab==='mcp'?'Connect MCP server: coming next (URL + auth wizard)':'Add endpoint: coming next (method, URL, auth, test)');
+});
+
+/* ---------- drawer ---------- */
+let dtab='General';
+const DT=['General','Model','Tools','Guardrails','Access','Memory','Observe'];
+function openDrawer(){$('#drawer').classList.add('open');$('#main').classList.add('dock')}
+function renderDrawer(){
+ const d=$('#drawer');const n=selNode();
+ if(!n||n.type!=='agent'){d.classList.remove('open');$('#main').classList.remove('dock');return}
+ const a=agentOf(n);
+ const scroll=$('#dbody')?$('#dbody').scrollTop:0;
+ d.innerHTML=`<header><b>${a.name}</b><button class="btn" id="dclose">✕</button></header>
+ <div class="dtabs">${DT.map(t=>`<button class="${t===dtab?'on':''}" data-dt="${t}">${t}</button>`).join('')}</div><div id="dbody">${body(a,n)}</div>`;
+ $('#dbody').scrollTop=scroll;
+}
+const slider=(k,l,min,max,step,v)=>`<div class="row"><label style="width:80px;color:var(--mute);font-size:12px">${l}</label><input type="range" data-k="${k}" min="${min}" max="${max}" step="${step}" value="${v}"><span class="v">${v}</span></div>`;
+function body(a,n){
+ if(dtab==='General')return`<label class="f">Name<input type="text" data-k="name" value="${a.name}"></label>
+  <label class="f">Description<input type="text" data-k="desc" value="${a.desc||''}"></label>
+  <label class="f">Prompt (system instructions)<textarea data-k="prompt">${a.prompt}</textarea></label>
+  <h4>Skills</h4><div>${a.skills.map(s=>`<span class="badge">${s} <a href="#" data-rmskill="${s}" style="color:var(--danger);text-decoration:none">×</a></span>`).join('')}</div>
+  <div class="row" style="margin-top:8px"><input type="text" id="newskill" placeholder="Add skill…" style="flex:1;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text)"><button class="btn" id="addskill">Add</button></div><h4>Danger zone</h4><button class="btn" id="delAgent" style="color:var(--danger)">Delete agent</button>`;
+ if(dtab==='Model')return`<label class="f">Agent framework<select data-k="framework">${['ADK 2.0','LangGraph','CrewAI','Custom'].map(o=>`<option ${o===a.framework?'selected':''}>${o}</option>`).join('')}</select></label>
+  <label class="f">Orchestration pattern<select data-k="pattern">${['sequential','parallel','loop','router'].map(o=>`<option ${o===a.pattern?'selected':''}>${o}</option>`).join('')}</select></label>
+  <label class="f">Model<select data-k="model">${['claude-fable-5-1','claude-opus-5-5','claude-sonnet-5-5','claude-haiku-5-5'].map(o=>`<option ${o===a.model?'selected':''}>${o}</option>`).join('')}</select></label>
+  <h4>Generation</h4>${slider('maxTokens','Max tokens',256,8192,256,a.maxTokens)}${slider('temp','Temperature',0,1,0.05,a.temp)}${slider('topP','Top-P',0,1,0.05,a.topP)}${slider('topK','Top-K',1,100,1,a.topK)}`;
+ if(dtab==='Tools'){
+  const has=(t,ref)=>S.edges.some(e=>{const x=node(e.to);return e.from===n.id&&x&&x.type===t&&x.ref===ref});
+  let h='';
+  MCP.forEach(s=>{h+=`<h4>${s.name}</h4>`+s.tools.map(t=>{const id=s.id+'.'+t[0];return`<div class="chk"><input type="checkbox" data-use="tool:${id}" ${has('tool',id)?'checked':''}><span>${t[0]}</span><span class="badge ${t[1]==='write'?'w':''}">${t[1]}</span><span class="sp"></span><label title="Require human approval"><small>approve</small> <input type="checkbox" data-appr="${id}" ${a.approval.includes(id)?'checked':''}></label></div>`}).join('')});
+  h+=`<h4>Endpoints</h4>`+ENDPOINTS.map(e=>`<div class="chk"><input type="checkbox" data-use="endpoint:${e.id}" ${has('endpoint',e.id)?'checked':''}><span>${e.name}</span><span class="badge ${e.mode==='write'?'w':''}">${e.method}</span><span class="sp"></span><label><small>approve</small> <input type="checkbox" data-appr="${e.id}" ${a.approval.includes(e.id)?'checked':''}></label></div>`).join('');
+  return h;}
+ if(dtab==='Guardrails'){const G=[['pii','PII redaction','Masks emails, phones, card numbers'],['injection','Prompt-injection defense','Detects hidden instructions in tool output'],['toxicity','Toxicity filter','Blocks harmful content'],['topics','Topic restrictions','Keep the agent on allowed topics'],['schema','Output schema validation','Reject malformed responses']];
+  return G.map(([k,l,d])=>`<div class="chk"><div><div>${l}</div><small>${d}</small></div><span class="sp"></span><select data-g="${k}">${['off','log','warn','block'].map(o=>`<option ${a.guard[k]===o?'selected':''}>${o}</option>`).join('')}</select></div>`).join('')+`<p><button class="btn" onclick="toast('Custom rules: coming next')">+ Add custom rule</button></p>`;}
+ if(dtab==='Access')return`<p style="color:var(--mute);font-size:12px">Admin: edit, delete, manage access. Executor: run only. Viewer: read-only and traces.</p>
+  <table><tr><th>User / group</th><th>Role</th><th></th></tr>${a.roles.map((r,i)=>`<tr><td>${r.who}</td><td><select data-role="${i}">${['Admin','Executor','Viewer'].map(o=>`<option ${o===r.role?'selected':''}>${o}</option>`).join('')}</select></td><td><a href="#" data-rmrole="${i}" style="color:var(--danger);text-decoration:none">remove</a></td></tr>`).join('')}</table>
+  <div class="row" style="margin-top:10px"><input type="text" id="newrole" placeholder="email or group" style="flex:1;padding:6px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--text)"><button class="btn" id="addrole">Add</button></div>`;
+ if(dtab==='Memory')return`<div class="chk"><span>Short-term (session)</span><span class="sp"></span><input type="checkbox" data-m="short" ${a.mem.short?'checked':''}></div>
+  <div class="chk"><span>Long-term (persistent)</span><span class="sp"></span><input type="checkbox" data-m="long" ${a.mem.long?'checked':''}></div>
+  <br><label class="f">Backend<select data-m="backend">${['Vector DB','Key-value','SQL'].map(o=>`<option ${o===a.mem.backend?'selected':''}>${o}</option>`).join('')}</select></label>
+  <label class="f">Retention (days)<input type="number" data-m="retention" value="${a.mem.retention}"></label>
+  <label class="f">Max entries<input type="number" data-m="max" value="${a.mem.max}"></label>
+  <button class="btn" onclick="toast('Memory cleared (demo)')">Clear memory</button>`;
+ if(dtab==='Observe'){const seedN=[...a.id].reduce((s,c)=>s+c.charCodeAt(0),0);const bars=Array.from({length:14},(_,i)=>20+((seedN*(i+3))%80));
+  return`<div class="stat"><div class="card"><b>${(seedN%90)+40}</b><small>Sessions (7d)</small></div><div class="card"><b>${((seedN%40)+10)}K</b><small>Tokens used</small></div><div class="card"><b>${(seedN%8)+1}.${seedN%9}s</b><small>p50 latency</small></div><div class="card"><b>$${(seedN%30)/10+0.8}</b><small>Est. cost</small></div></div>
+  <h4>Tokens / day</h4><div class="bars">${bars.map(h=>`<i style="height:${h}%"></i>`).join('')}</div>
+  <h4>Tool calls</h4><table>${connectedOf(n.id).filter(k=>k.type!=='agent').map(k=>`<tr><td>${k.type==='tool'?toolMeta(k.ref).name:ENDPOINTS.find(e=>e.id===k.ref).name}</td><td>${(seedN%50)+5} calls</td><td>${96+(seedN%4)}% ok</td></tr>`).join('')||'<tr><td class="empty">No tools connected</td></tr>'}</table>`;}
+}
+const dr=$('#drawer');
+dr.addEventListener('click',e=>{
+ const a=agentOf(selNode());
+ if(e.target.id==='dclose'){dr.classList.remove('open');$('#main').classList.remove('dock');return}
+ if(e.target.id==='delAgent'){if(confirm('Delete this agent everywhere?')){const id=S.sel,ref=a.id;S.nodes.filter(x=>x.ref===ref&&x.type==='agent').forEach(x=>{S.edges=S.edges.filter(y=>y.from!==x.id&&y.to!==x.id)});S.nodes=S.nodes.filter(x=>!(x.type==='agent'&&x.ref===ref));S.agents=S.agents.filter(x=>x.id!==ref);S.sel=null;refresh()}return}
+ const t=e.target.closest('[data-dt]');if(t){dtab=t.dataset.dt;renderDrawer();return}
+ if(e.target.id==='addskill'){const v=$('#newskill').value.trim();if(v){a.skills.push(v);refresh()}return}
+ const rs=e.target.closest('[data-rmskill]');if(rs){e.preventDefault();a.skills=a.skills.filter(s=>s!==rs.dataset.rmskill);refresh();return}
+ if(e.target.id==='addrole'){const v=$('#newrole').value.trim();if(v){a.roles.push({who:v,role:'Executor'});refresh()}return}
+ const rr=e.target.closest('[data-rmrole]');if(rr){e.preventDefault();a.roles.splice(+rr.dataset.rmrole,1);refresh()}
+});
+dr.addEventListener('input',e=>{
+ const n=selNode(),a=agentOf(n),el=e.target;
+ if(el.dataset.k){const v=el.type==='range'?+el.value:el.value;a[el.dataset.k]=v;if(el.type==='range')el.nextElementSibling.textContent=v;
+  if(['name','desc','framework','pattern'].includes(el.dataset.k)){renderCanvas();renderList();dr.querySelector('header b').textContent=a.name}save()}
+});
+dr.addEventListener('change',e=>{
+ const n=selNode(),a=agentOf(n),el=e.target;
+ if(el.dataset.use){const [type,ref]=el.dataset.use.split(/:(.+)/);
+  if(el.checked){const k=connectedOf(n.id).length;const t=addNode(type,ref,n.x+(k-1)*140,n.y+170);connect(n.id,t.id)}
+  else{const t=S.nodes.find(x=>x.type===type&&x.ref===ref);if(t)S.edges=S.edges.filter(x=>!(x.from===n.id&&x.to===t.id))}
+  refresh();return}
+ if(el.dataset.appr){a.approval=el.checked?[...a.approval,el.dataset.appr]:a.approval.filter(x=>x!==el.dataset.appr);save();return}
+ if(el.dataset.g){a.guard[el.dataset.g]=el.value;save();return}
+ if(el.dataset.role){a.roles[+el.dataset.role].role=el.value;save();return}
+ if(el.dataset.m){a.mem[el.dataset.m]=el.type==='checkbox'?el.checked:el.type==='number'?+el.value:el.value;save();return}
+ if(el.dataset.k){renderCanvas();renderList();save()}
+});
+
+/* ---------- run / trace ---------- */
+$('#runBtn').addEventListener('click',()=>$('#run').classList.toggle('open'));
+$('#go').addEventListener('click',()=>{
+ const n=selNode();const tr=$('#trace');
+ if(!n||n.type!=='agent'){tr.innerHTML='<div>Select an agent on the canvas first.</div>';return}
+ const lines=[];let t=0;
+ const walk=(id,d)=>{const x=node(id),a=agentOf(x);const gs=Object.entries(a.guard).filter(([,v])=>v==='block').map(([k])=>k);
+  lines.push(`${'&nbsp;'.repeat(d*4)}🤖 <b>${a.name}</b> <small>(${a.model}, ${a.pattern}) +${t+=120}ms</small>`);
+  if(gs.length)lines.push(`${'&nbsp;'.repeat(d*4+2)}🛡 guardrails passed: ${gs.join(', ')}`);
+  connectedOf(id).forEach(k=>{
+   if(k.type==='agent')walk(k.id,d+1);
+   else{const nm=k.type==='tool'?toolMeta(k.ref).name:ENDPOINTS.find(e=>e.id===k.ref).name;const needs=a.approval.includes(k.ref);
+    lines.push(`${'&nbsp;'.repeat(d*4+2)}${k.type==='tool'?'🔧':'🌐'} ${nm} ${needs?'<span style="color:var(--danger)">⏸ awaiting human approval</span>':'✓ '+(t+=80)+'ms'}`)}})};
+ walk(n.id,0);lines.push(`<b>Done.</b> ~${Math.round(t*7.4)} tokens`);
+ tr.innerHTML='';lines.forEach((l,i)=>setTimeout(()=>{const d=document.createElement('div');d.innerHTML=l;tr.appendChild(d);tr.scrollTop=1e5},i*250));
+});
+
+/* ---------- keyboard ---------- */
+document.addEventListener('keydown',e=>{
+ const typing=/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+ if(e.key==='Escape'){$('#menu').style.display='none';$('#drawer').classList.remove('open');$('#main').classList.remove('dock')}
+ if((e.key==='Delete'||e.key==='Backspace')&&!typing&&S.sel){const id=S.sel;S.nodes=S.nodes.filter(n=>n.id!==id);S.edges=S.edges.filter(x=>x.from!==id&&x.to!==id);S.sel=null;refresh()}
+});
+/* ---------- toolbar ---------- */
+$('#resetBtn').addEventListener('click',()=>{S=seed();$('#drawer').classList.remove('open');refresh()});
+$('#autoBtn').addEventListener('click',()=>{
+ // simple layered layout: depth by longest path from roots
+ const depth={};const children=new Set(S.edges.map(e=>e.to));
+ const go=(id,d)=>{depth[id]=Math.max(depth[id]||0,d);S.edges.filter(e=>e.from===id).forEach(e=>go(e.to,d+1))};
+ S.nodes.filter(n=>!children.has(n.id)).forEach(n=>go(n.id,0));
+ const cols={};S.nodes.forEach(n=>{const d=depth[n.id]||0;(cols[d]=cols[d]||[]).push(n)});
+ Object.entries(cols).forEach(([d,ns])=>ns.forEach((n,i)=>{n.x=60+i*240;n.y=50+d*185}));
+ refresh();
+});
+// edges must receive clicks: enable pointer events via CSS on paths, world handles node events
+document.getElementById('edges').style.pointerEvents='none';
+const css=document.createElement('style');css.textContent='#edges{pointer-events:none}#edges path{pointer-events:stroke}';document.head.appendChild(css);
+
+renderTabs();refresh();if(selNode()&&selNode().type==='agent')openDrawer();
+</script>
+</body>
+</html>

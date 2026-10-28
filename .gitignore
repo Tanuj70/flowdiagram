@@ -1,0 +1,22 @@
+# dependencies and build output
+node_modules
+.next
+out
+dist
+.venv
+venv
+__pycache__
+*.pyc
+*.tsbuildinfo
+# local state and secrets
+*.db
+*.sqlite
+.env
+.env.*
+!.env.example
+# tool caches
+.pytest_cache
+.ruff_cache
+.DS_Store
+# generated deployment packages (can contain your project IDs)
+deployment.json
